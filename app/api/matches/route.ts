@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest) {
     where: { status: "completed" },
     include: { winner: true },
   });
-  const winners = allMatches.map((m) => m.winner).filter(Boolean);
+  const winners = allMatches.map((m: typeof allMatches[0]) => m.winner).filter(Boolean);
   const uniqueWinners = [...new Map(winners.map((w) => [w!.id, w])).values()];
 
   let subject = "RoboSoccer — You Advanced to the Next Round!";
