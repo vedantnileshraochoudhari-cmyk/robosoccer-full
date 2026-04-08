@@ -25,6 +25,7 @@ export async function GET() {
       total: matches.length,
       completed: matches.length,
       goals: totalGoals,
+      total_teams: await prisma.team.count(),
     },
   });
 }

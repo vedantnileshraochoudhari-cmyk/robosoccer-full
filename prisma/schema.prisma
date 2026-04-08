@@ -28,9 +28,10 @@ model Match {
   score1    Int?
   score2    Int?
   winnerId  Int?
-  status    String   @default("pending")
+  status    String   @default("upcoming")
   isBye     Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   team1  Team  @relation("Team1Matches", fields: [team1Id], references: [id])
   team2  Team? @relation("Team2Matches", fields: [team2Id], references: [id])

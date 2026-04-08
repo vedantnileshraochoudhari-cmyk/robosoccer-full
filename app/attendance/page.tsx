@@ -52,6 +52,14 @@ export default function AttendancePage() {
   const [importMsg, setImportMsg] = useState("");
   const [role, setRole] = useState<string | null>(null);
 
+  // Manual team form
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newGmail, setNewGmail] = useState("");
+  const [newCollege, setNewCollege] = useState("");
+  const [newPlayers, setNewPlayers] = useState("");
+  const [formErr, setFormErr] = useState("");
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
@@ -98,18 +106,29 @@ export default function AttendancePage() {
     fetchTeams();
   }
 
-  async function addTeamManually() {
-    const name = prompt("Team Name:");
-    if (!name) return;
-    const gmail = prompt("Team Gmail:");
-    if (!gmail) return;
-    const college = prompt("College Name:") || "";
-    await fetch("/api/teams", {
+  async function handleAddTeam() {
+    if (!newName || !newGmail) {
+      setFormErr("Team name and Gmail are required");
+      return;
+    }
+    setFormErr("");
+    const members = newPlayers.split(",").map(p => p.trim()).filter(Boolean);
+    const res = await fetch("/api/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, gmail, members: [], college }),
+      body: JSON.stringify({ name: newName, gmail: newGmail, members, college: newCollege }),
     });
-    fetchTeams();
+    if (res.ok) {
+      setNewName("");
+      setNewGmail("");
+      setNewCollege("");
+      setNewPlayers("");
+      setIsAdding(false);
+      fetchTeams();
+    } else {
+      const data = await res.json();
+      setFormErr(data.error || "Failed to add team");
+    }
   }
 
   async function editTeamName(team: Team) {
@@ -222,9 +241,9 @@ export default function AttendancePage() {
           <motion.button
             whileHover={{ scale: 1.04, boxShadow: "0 0 14px rgba(232,255,60,0.3)" }}
             whileTap={{ scale: 0.96 }}
-            onClick={(e) => { addRipple(e); addTeamManually(); }}
+            onClick={(e) => { addRipple(e); setIsAdding(!isAdding); }}
             style={{
-              background: "transparent",
+              background: isAdding ? "rgba(232,255,60,0.15)" : "transparent",
               color: "var(--accent)",
               border: "1px solid rgba(232,255,60,0.5)",
               borderRadius: 8,
@@ -237,9 +256,56 @@ export default function AttendancePage() {
               overflow: "hidden",
             }}
           >
-            + ADD MANUALLY
+            {isAdding ? "CANCEL" : "+ ADD MANUALLY"}
           </motion.button>
         </div>
+        
+        {/* Manual Add Form */}
+        <AnimatePresence>
+          {isAdding && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              style={{ overflow: "hidden" }}
+            >
+              <div style={{ paddingTop: 20, marginTop: 20, borderTop: "1px solid rgba(232,255,60,0.1)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 15 }}>
+                  <div>
+                    <label style={{ fontSize: "0.65rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>TEAM NAME</label>
+                    <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Neon Riders" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.65rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>EMAIL</label>
+                    <input value={newGmail} onChange={e => setNewGmail(e.target.value)} placeholder="team@example.com" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.65rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>COLLEGE</label>
+                    <input value={newCollege} onChange={e => setNewCollege(e.target.value)} placeholder="Tech University" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.65rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>PLAYERS (Comma separated)</label>
+                    <input value={newPlayers} onChange={e => setNewPlayers(e.target.value)} placeholder="John, Mike, Sara" style={inputStyle} />
+                  </div>
+                </div>
+                {formErr && <p style={{ color: "#ff4444", fontSize: "0.75rem", marginTop: 8 }}>{formErr}</p>}
+                <div style={{ marginTop: 15, display: "flex", justifyContent: "flex-end" }}>
+                  <motion.button
+                    whileHover={{ scale: 1.05, boxShadow: "0 0 15px #e8ff3c44" }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleAddTeam}
+                    style={{
+                      background: "var(--accent)", color: "var(--bg)", border: "none", borderRadius: 6,
+                      padding: "8px 24px", fontFamily: "Bebas Neue, sans-serif", fontSize: "1rem", cursor: "pointer"
+                    }}
+                  >
+                    SAVE TEAM
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {importMsg && (
           <p style={{ fontFamily: "DM Mono, monospace", fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 10 }}>
             {importMsg}

@@ -14,7 +14,7 @@ export default async function Dashboard() {
 
   const presentTeams = teams.filter((t) => t.present);
   const completedMatches = matches.filter((m) => m.status === "completed");
-  const pendingMatches = matches.filter((m) => m.status === "pending");
+  const upcomingMatches = matches.filter((m) => m.status === "upcoming" || m.status === "live");
   const totalGoals = completedMatches.reduce((s, m) => s + (m.score1 ?? 0) + (m.score2 ?? 0), 0);
   const rounds = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b);
   const currentRound = rounds.length > 0 ? Math.max(...rounds) : 0;
@@ -29,7 +29,7 @@ export default async function Dashboard() {
 
   const stats = [
     { label: "Registered Teams", value: teams.length, sub: `${presentTeams.length} present`, icon: "🏟️" },
-    { label: "Matches Played", value: completedMatches.length, sub: `${pendingMatches.length} pending`, icon: "⚽" },
+    { label: "Matches Played", value: completedMatches.length, sub: `${upcomingMatches.length} remaining`, icon: "⚽" },
     { label: "Total Goals", value: totalGoals, sub: "across all rounds", icon: "🎯" },
     {
       label: "Tournament Stage",

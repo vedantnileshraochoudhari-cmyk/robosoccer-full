@@ -219,7 +219,33 @@ interface Props {
   recentMatches: Match[];
 }
 
-export default function DashboardClient({ stats, navItems, recentMatches }: Props) {
+export default function DashboardClient({ stats: initialStats, navItems, recentMatches: initialMatches }: Props) {
+  const [stats, setStats] = useState(initialStats);
+  const [recentMatches, setRecentMatches] = useState(initialMatches);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/results");
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        setStats(prev => {
+          const next = [...prev];
+          next[0].value = data.stats.total_teams || next[0].value; // If we add total_teams to result api
+          next[1].value = data.stats.completed;
+          next[1].sub = `${data.stats.total - data.stats.completed} remaining`;
+          next[2].value = data.stats.goals;
+          return next;
+        });
+        setRecentMatches(data.matches.reverse().slice(0, 5));
+      } catch (e) {
+        // Fallback or silent Fail
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div>
       {/* Hero */}
