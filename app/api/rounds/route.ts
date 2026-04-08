@@ -23,6 +23,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const role = req.cookies.get("rs_session")?.value;
+  if (role !== "admin" && role !== "volunteer") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const { action, round } = await req.json();
 
   if (action !== "close") {

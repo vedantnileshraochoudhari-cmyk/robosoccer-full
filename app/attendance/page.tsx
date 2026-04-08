@@ -50,6 +50,14 @@ export default function AttendancePage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => setRole(data.role))
+      .catch(() => setRole(null));
+  }, []);
 
   async function fetchTeams() {
     const res = await fetch("/api/teams");
@@ -152,8 +160,9 @@ export default function AttendancePage() {
         </p>
       </div>
 
-      {/* Import CSV */}
-      <motion.div
+      {/* Import CSV — only for admin/volunteer */}
+      {(role === "admin" || role === "volunteer") && (
+        <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4 }}
@@ -237,6 +246,7 @@ export default function AttendancePage() {
           </p>
         )}
       </motion.div>
+      )}
 
       {/* Search */}
       <motion.div
@@ -328,70 +338,72 @@ export default function AttendancePage() {
                     )}
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    <motion.button
-                      whileHover={{ scale: 1.1, borderColor: "var(--accent)", color: "var(--accent)" }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => { addRipple(e); editTeamName(team); }}
-                      title="Edit name"
-                      style={{
-                        background: "transparent",
-                        border: "1px solid rgba(42,42,58,0.8)",
-                        borderRadius: 6,
-                        padding: "4px 8px",
-                        color: "var(--text-muted)",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        position: "relative",
-                        overflow: "hidden",
-                        transition: "border-color 0.2s, color 0.2s",
-                      }}
-                    >
-                      ✎
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.1, boxShadow: "0 0 12px rgba(255,68,68,0.4)" }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => { addRipple(e); deleteTeam(team); }}
-                      title="Delete team"
-                      style={{
-                        background: "transparent",
-                        border: "1px solid rgba(255,68,68,0.5)",
-                        borderRadius: 6,
-                        padding: "4px 8px",
-                        color: "#ff4444",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        position: "relative",
-                        overflow: "hidden",
-                      }}
-                    >
-                      ✕
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05, boxShadow: team.present ? "0 0 16px #e8ff3c55" : "0 0 12px rgba(232,255,60,0.2)" }}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={(e) => { addRipple(e); togglePresent(team); }}
-                      disabled={updating === team.id}
-                      style={{
-                        background: team.present ? "var(--accent)" : "transparent",
-                        border: `1px solid ${team.present ? "var(--accent)" : "rgba(42,42,58,0.8)"}`,
-                        borderRadius: 8,
-                        padding: "6px 16px",
-                        color: team.present ? "var(--bg)" : "var(--text-muted)",
-                        fontFamily: "Bebas Neue, sans-serif",
-                        fontSize: "0.95rem",
-                        letterSpacing: "0.04em",
-                        cursor: "pointer",
-                        minWidth: 90,
-                        position: "relative",
-                        overflow: "hidden",
-                        transition: "background 0.2s, border-color 0.2s, color 0.2s",
-                      }}
-                    >
-                      {updating === team.id ? "..." : team.present ? "PRESENT" : "ABSENT"}
-                    </motion.button>
-                  </div>
+                  {(role === "admin" || role === "volunteer") && (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+                      <motion.button
+                        whileHover={{ scale: 1.1, borderColor: "var(--accent)", color: "var(--accent)" }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => { addRipple(e); editTeamName(team); }}
+                        title="Edit name"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid rgba(42,42,58,0.8)",
+                          borderRadius: 6,
+                          padding: "4px 8px",
+                          color: "var(--text-muted)",
+                          cursor: "pointer",
+                          fontSize: "0.75rem",
+                          position: "relative",
+                          overflow: "hidden",
+                          transition: "border-color 0.2s, color 0.2s",
+                        }}
+                      >
+                        ✎
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1, boxShadow: "0 0 12px rgba(255,68,68,0.4)" }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => { addRipple(e); deleteTeam(team); }}
+                        title="Delete team"
+                        style={{
+                          background: "transparent",
+                          border: "1px solid rgba(255,68,68,0.5)",
+                          borderRadius: 6,
+                          padding: "4px 8px",
+                          color: "#ff4444",
+                          cursor: "pointer",
+                          fontSize: "0.75rem",
+                          position: "relative",
+                          overflow: "hidden",
+                        }}
+                      >
+                        ✕
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05, boxShadow: team.present ? "0 0 16px #e8ff3c55" : "0 0 12px rgba(232,255,60,0.2)" }}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={(e) => { addRipple(e); togglePresent(team); }}
+                        disabled={updating === team.id}
+                        style={{
+                          background: team.present ? "var(--accent)" : "transparent",
+                          border: `1px solid ${team.present ? "var(--accent)" : "rgba(42,42,58,0.8)"}`,
+                          borderRadius: 8,
+                          padding: "6px 16px",
+                          color: team.present ? "var(--bg)" : "var(--text-muted)",
+                          fontFamily: "Bebas Neue, sans-serif",
+                          fontSize: "0.95rem",
+                          letterSpacing: "0.04em",
+                          cursor: "pointer",
+                          minWidth: 90,
+                          position: "relative",
+                          overflow: "hidden",
+                          transition: "background 0.2s, border-color 0.2s, color 0.2s",
+                        }}
+                      >
+                        {updating === team.id ? "..." : team.present ? "PRESENT" : "ABSENT"}
+                      </motion.button>
+                    </div>
+                  )}
                 </motion.div>
               );
             })}

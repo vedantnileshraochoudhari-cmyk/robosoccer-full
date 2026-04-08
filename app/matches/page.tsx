@@ -215,20 +215,15 @@ function MatchCard({
       }}
     >
       {/* Team 1 */}
-      <span
-        style={{
-          flex: 1,
-          fontFamily: "Bebas Neue, sans-serif",
-          fontSize: "1rem",
-          letterSpacing: "0.04em",
-          color: m.winnerId === m.team1Id ? "var(--accent)" : "var(--text)",
-          minWidth: 100,
-          textShadow: m.winnerId === m.team1Id ? "0 0 12px #e8ff3c66" : "none",
-        }}
-      >
-        {m.team1.name}
-        {m.winnerId === m.team1Id && <span style={{ marginLeft: 6, fontSize: "0.7rem" }}>★</span>}
-      </span>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ color: m.winnerId === m.team1Id ? "var(--accent)" : "var(--text)" }}>
+            {m.team1.name}
+            {m.winnerId === m.team1Id && <span style={{ marginLeft: 6, fontSize: "0.7rem" }}>★</span>}
+          </span>
+          <span style={{ fontSize: "0.65rem", fontFamily: "DM Mono, monospace", color: "var(--text-muted)", letterSpacing: "0.02em" }}>
+            {m.team1.college}
+          </span>
+        </div>
 
       {/* Score */}
       {m.isBye ? (
@@ -262,21 +257,17 @@ function MatchCard({
       )}
 
       {/* Team 2 */}
-      <span
-        style={{
-          flex: 1,
-          textAlign: "right",
-          fontFamily: "Bebas Neue, sans-serif",
-          fontSize: "1rem",
-          letterSpacing: "0.04em",
-          color: m.winnerId === m.team2Id ? "var(--accent)" : "var(--text)",
-          minWidth: 100,
-          textShadow: m.winnerId === m.team2Id ? "0 0 12px #e8ff3c66" : "none",
-        }}
-      >
-        {m.winnerId === m.team2Id && <span style={{ marginRight: 6, fontSize: "0.7rem" }}>★</span>}
-        {m.team2?.name ?? "—"}
-      </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+          <span style={{ color: m.winnerId === m.team2Id ? "var(--accent)" : "var(--text)" }}>
+            {m.winnerId === m.team2Id && <span style={{ marginRight: 6, fontSize: "0.7rem" }}>★</span>}
+            {m.team2?.name ?? "—"}
+          </span>
+          {m.team2 && (
+            <span style={{ fontSize: "0.65rem", fontFamily: "DM Mono, monospace", color: "var(--text-muted)", letterSpacing: "0.02em" }}>
+              {m.team2.college}
+            </span>
+          )}
+        </div>
 
       {/* Actions */}
       <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
@@ -607,6 +598,14 @@ export default function MatchesPage() {
   const [editScores, setEditScores] = useState<Record<number, { s1: string; s2: string }>>({});
   const [saving, setSaving] = useState<number | null>(null);
   const [closingRound, setClosingRound] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => setRole(data.role))
+      .catch(() => setRole(null));
+  }, []);
   const [closedBanner, setClosedBanner] = useState<number | null>(null);
 
   // Create form
@@ -654,7 +653,7 @@ export default function MatchesPage() {
   const rounds = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b);
   const closedSet = new Set(closedRounds);
   const openRounds = rounds.filter((r) => !closedSet.has(r));
-  const activeRound = openRounds.length > 0 ? Math.max(...openRounds) : null;
+  const activeRound = openRounds.length > 0 ? Math.max(...openRounds) : (rounds.length === 0 ? 1 : null);
 
   // Teams available for manual creation in the active round
   const activeRoundTeamIds = new Set(
@@ -845,88 +844,119 @@ export default function MatchesPage() {
         />
       )}
 
-      {/* Create Match — only when active round exists and is not closed */}
-      {activeRound !== null && (
+      {/* Create Match — only when active round exists and user is admin/volunteer */}
+      {activeRound !== null && (role === "admin" || role === "volunteer") && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4 }}
-          style={{ ...glass, padding: 20, marginBottom: 28, position: "relative" }}
+          style={{ ...glass, padding: 24, marginBottom: 32, position: "relative", overflow: "hidden" }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 2,
-              borderRadius: "12px 12px 0 0",
-              background: "linear-gradient(90deg, transparent, #e8ff3c, transparent)",
-              opacity: 0.5,
-            }}
-          />
-          <h2
-            style={{
-              fontFamily: "Bebas Neue, sans-serif",
-              fontSize: "1.05rem",
-              color: "var(--text)",
-              letterSpacing: "0.04em",
-              marginBottom: 14,
-            }}
-          >
-            ADD MATCH TO {getRoundLabel(activeRound, matches)}
-          </h2>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div style={{ flex: 1, minWidth: 140 }}>
-              <label style={{ fontFamily: "DM Mono, monospace", fontSize: "0.7rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                TEAM 1
-              </label>
-              <select value={newTeam1} onChange={(e) => setNewTeam1(e.target.value)} style={{ ...inputStyle, width: "100%", background: "rgba(26,26,36,0.8)", border: "1px solid rgba(42,42,58,0.8)", borderRadius: 8 }}>
-                <option value="">Select team...</option>
-                {availableTeams.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ flex: 1, minWidth: 140 }}>
-              <label style={{ fontFamily: "DM Mono, monospace", fontSize: "0.7rem", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                TEAM 2
-              </label>
-              <select value={newTeam2} onChange={(e) => setNewTeam2(e.target.value)} style={{ ...inputStyle, width: "100%", background: "rgba(26,26,36,0.8)", border: "1px solid rgba(42,42,58,0.8)", borderRadius: 8 }}>
-                <option value="">Select team...</option>
-                <option value="bye">BYE (no opponent)</option>
-                {availableTeams.filter((t) => String(t.id) !== newTeam1).map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-            <motion.button
-              whileHover={{ scale: creating ? 1 : 1.04, boxShadow: creating ? "none" : "0 0 16px #e8ff3c44" }}
-              whileTap={{ scale: creating ? 1 : 0.96 }}
-              onClick={(e) => { addRipple(e); createMatch(); }}
-              disabled={creating}
+          {/* Header with decorative line */}
+          <div style={{ display: "flex", alignItems: "center", gap: 15, marginBottom: 20 }}>
+            <h2
               style={{
-                background: "var(--accent)",
-                color: "var(--bg)",
-                border: "none",
-                borderRadius: 8,
-                padding: "8px 18px",
                 fontFamily: "Bebas Neue, sans-serif",
-                fontSize: "1rem",
-                letterSpacing: "0.04em",
-                cursor: creating ? "not-allowed" : "pointer",
-                position: "relative",
-                overflow: "hidden",
-                opacity: creating ? 0.7 : 1,
+                fontSize: "1.2rem",
+                color: "var(--accent)",
+                letterSpacing: "0.06em",
+                textShadow: "0 0 12px #e8ff3c44",
+                whiteSpace: "nowrap"
               }}
             >
-              {creating ? "..." : "CREATE"}
-            </motion.button>
+              CREATE MATCH MANUALLY
+            </h2>
+            <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(232,255,60,0.3), transparent)" }} />
+            <span style={{ fontFamily: "DM Mono, monospace", fontSize: "0.7rem", color: "var(--text-muted)" }}>
+              {getRoundLabel(activeRound, matches)}
+            </span>
           </div>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>
+            {/* Team 1 Slot */}
+            <div style={{ flex: 1, minWidth: 200, padding: 16, background: "rgba(26,26,36,0.4)", borderRadius: 12, border: "1px solid rgba(232,255,60,0.05)" }}>
+              <label style={{ fontFamily: "DM Mono, monospace", fontSize: "0.65rem", color: "var(--accent)", display: "block", marginBottom: 8, letterSpacing: "0.1em" }}>
+                TEAM 1
+              </label>
+              <select 
+                value={newTeam1} 
+                onChange={(e) => setNewTeam1(e.target.value)} 
+                style={{ ...inputStyle, width: "100%", background: "rgba(13,13,18,0.6)", border: "1px solid rgba(42,42,58,0.8)", borderRadius: 8, cursor: "pointer" }}
+              >
+                <option value="">Select first team...</option>
+                {availableTeams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name.toUpperCase()} ({t.college})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* VS Indicator */}
+            <div style={{ 
+              width: 40, height: 40, borderRadius: "50%", 
+              background: "rgba(232,255,60,0.1)", border: "1px solid rgba(232,255,60,0.2)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "Bebas Neue, sans-serif", color: "var(--accent)", fontSize: "0.9rem",
+              textShadow: "0 0 10px #e8ff3c66", zIndex: 2
+            }}>
+              VS
+            </div>
+
+            {/* Team 2 Slot */}
+            <div style={{ flex: 1, minWidth: 200, padding: 16, background: "rgba(26,26,36,0.4)", borderRadius: 12, border: "1px solid rgba(232,255,60,0.05)" }}>
+              <label style={{ fontFamily: "DM Mono, monospace", fontSize: "0.65rem", color: "var(--accent)", display: "block", marginBottom: 8, letterSpacing: "0.1em" }}>
+                TEAM 2
+              </label>
+              <select 
+                value={newTeam2} 
+                onChange={(e) => setNewTeam2(e.target.value)} 
+                style={{ ...inputStyle, width: "100%", background: "rgba(13,13,18,0.6)", border: "1px solid rgba(42,42,58,0.8)", borderRadius: 8, cursor: "pointer" }}
+              >
+                <option value="">Select second team...</option>
+                <option value="bye">BYE (NO OPPONENT)</option>
+                {availableTeams.filter((t) => String(t.id) !== newTeam1).map((t) => (
+                  <option key={t.id} value={t.id}>{t.name.toUpperCase()} ({t.college})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Create Button */}
+            <div style={{ width: "100%", display: "flex", justifyContent: "center", marginTop: 8 }}>
+              <motion.button
+                whileHover={{ scale: creating ? 1 : 1.02, boxShadow: creating ? "none" : "0 0 20px #e8ff3c33" }}
+                whileTap={{ scale: creating ? 1 : 0.98 }}
+                onClick={(e) => { addRipple(e); createMatch(); }}
+                disabled={creating}
+                style={{
+                  background: "var(--accent)",
+                  color: "var(--bg)",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "12px 40px",
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "1.1rem",
+                  letterSpacing: "0.08em",
+                  cursor: creating ? "not-allowed" : "pointer",
+                  position: "relative",
+                  overflow: "hidden",
+                  opacity: creating ? 0.7 : 1,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+                }}
+              >
+                {creating ? "INITIALIZING..." : "CREATE MATCH"}
+              </motion.button>
+            </div>
+          </div>
+          
           {presentTeams.length < 2 && (
-            <p style={{ fontFamily: "DM Mono, monospace", fontSize: "0.72rem", color: "#ff8844", marginTop: 10 }}>
-              ⚠ Less than 2 teams are marked present. Mark teams present in Attendance first.
-            </p>
+            <div style={{ 
+              marginTop: 20, padding: "10px 15px", borderRadius: 8, background: "rgba(255,136,68,0.05)", 
+              border: "1px solid rgba(255,136,68,0.2)", display: "flex", alignItems: "center", gap: 10 
+            }}>
+              <span style={{ fontSize: "1.1rem" }}>⚠</span>
+              <p style={{ fontFamily: "DM Mono, monospace", fontSize: "0.72rem", color: "#ff8844", margin: 0 }}>
+                Less than 2 teams are marked present. Mark teams present in Attendance first.
+              </p>
+            </div>
           )}
         </motion.div>
       )}
@@ -954,8 +984,8 @@ export default function MatchesPage() {
                 setEditScores={setEditScores}
                 saving={saving}
                 onSave={saveScore}
-                onDelete={deleteMatch}
-                onCloseRound={closeRound}
+                onDelete={role === "admin" || role === "volunteer" ? deleteMatch : undefined}
+                onCloseRound={role === "admin" || role === "volunteer" ? closeRound : undefined}
                 closingRound={closingRound}
                 animIndex={ri}
               />

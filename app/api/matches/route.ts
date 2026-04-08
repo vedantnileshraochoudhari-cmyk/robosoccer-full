@@ -4,14 +4,46 @@ import { prisma } from "@/lib/prisma";
 import { sendAdvancementEmail } from "@/lib/email";
 
 export async function GET() {
-  const matches = await prisma.match.findMany({
-    include: { team1: true, team2: true, winner: true },
-    orderBy: [{ round: "asc" }, { createdAt: "asc" }],
-  });
-  return NextResponse.json(matches);
+  try {
+     await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Match" (
+        "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+        "round" INTEGER NOT NULL,
+        "team1Id" INTEGER NOT NULL,
+        "team2Id" INTEGER,
+        "score1" INTEGER,
+        "score2" INTEGER,
+        "winnerId" INTEGER,
+        "status" TEXT NOT NULL DEFAULT 'pending',
+        "isBye" BOOLEAN NOT NULL DEFAULT 0,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `).catch(() => {});
+    
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Settings" (
+        "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+        "key" TEXT NOT NULL UNIQUE,
+        "value" TEXT NOT NULL
+      );
+    `).catch(() => {});
+
+    const matches = await prisma.match.findMany({
+      include: { team1: true, team2: true, winner: true },
+      orderBy: [{ round: "asc" }, { createdAt: "asc" }],
+    });
+    return NextResponse.json(matches);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
+  const role = req.cookies.get("rs_session")?.value;
+  if (role !== "admin" && role !== "volunteer") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { round, team1Id, team2Id, isBye } = body;
   if (!round || !team1Id) {
@@ -40,6 +72,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const role = req.cookies.get("rs_session")?.value;
+  if (role !== "admin" && role !== "volunteer") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { id, score1, score2 } = body;
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
@@ -98,6 +135,11 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const role = req.cookies.get("rs_session")?.value;
+  if (role !== "admin" && role !== "volunteer") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });

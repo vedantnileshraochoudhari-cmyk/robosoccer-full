@@ -3,11 +3,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const teams = await prisma.team.findMany({ orderBy: { createdAt: "asc" } });
-  return NextResponse.json(teams);
+  try {
+    // Attempt to create tables if they don't exist (primitive migration)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Team" (
+        "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+        "name" TEXT NOT NULL,
+        "gmail" TEXT NOT NULL UNIQUE,
+        "members" TEXT NOT NULL,
+        "college" TEXT NOT NULL,
+        "present" BOOLEAN NOT NULL DEFAULT 0,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `).catch(() => {});
+
+    const teams = await prisma.team.findMany({ orderBy: { createdAt: "asc" } });
+    return NextResponse.json(teams);
+  } catch (error: any) {
+    console.error("Prisma Error:", error);
+    return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
+  const role = req.cookies.get("rs_session")?.value;
+  if (role !== "admin" && role !== "volunteer") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { name, gmail, members, college } = body;
   if (!name || !gmail) {
@@ -32,6 +55,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const role = req.cookies.get("rs_session")?.value;
+  if (role !== "admin" && role !== "volunteer") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { id, ...data } = body;
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
@@ -43,6 +71,11 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const role = req.cookies.get("rs_session")?.value;
+  if (role !== "admin" && role !== "volunteer") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
