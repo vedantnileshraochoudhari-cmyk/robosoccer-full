@@ -16,6 +16,9 @@ router.get('/', async (req, res) => {
 // POST create team
 router.post('/', async (req, res) => {
   const { name, email, players, college } = req.body;
+  if (!name || !email || !players) {
+    return res.status(400).json({ error: 'Missing required fields: name, email, players' });
+  }
   try {
     const team = await req.prisma.team.create({
       data: { name, email, players, college }

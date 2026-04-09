@@ -1,11 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ["query"],
-  });
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// NOTE: The frontend does NOT connect to the database directly.
+// All data access goes through the Express backend API (see lib/api.ts).
+// This file is intentionally empty — kept to avoid breaking any stale imports.
+export {};

@@ -17,6 +17,9 @@ router.get('/', async (req, res) => {
 // POST create match
 router.post('/', async (req, res) => {
   const { roundName, teamAId, teamBId } = req.body;
+  if (!roundName || !teamAId) {
+    return res.status(400).json({ error: 'Missing required fields: roundName, teamAId' });
+  }
   try {
     const match = await req.prisma.match.create({
       data: {

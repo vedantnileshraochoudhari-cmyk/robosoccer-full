@@ -45,6 +45,9 @@ router.get('/', async (req, res) => {
 // Hardware trigger from ESP32
 router.post('/', async (req, res) => {
   const { team } = req.body; // "A" or "B"
+  if (!team) {
+    return res.status(400).json({ error: 'Missing required field: team ("A" or "B")' });
+  }
   await handleGoal(req, res, team);
 });
 
