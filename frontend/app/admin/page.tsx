@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { API_URL } from "@/lib/api";
 
 function addRipple(e: React.MouseEvent<HTMLButtonElement>) {
   const btn = e.currentTarget;
@@ -39,56 +40,63 @@ export default function AdminPage() {
   async function adminAction(action: string) {
     setLoading(true);
     setMsg("");
+    console.log(`[Admin] Action: ${action}`);
 
     if (action === "export") {
-      const res = await fetch("/api/admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "tournament_results.csv";
-        a.click();
-        setMsg("Export downloaded!");
-        setMsgType("ok");
-      } else {
-        const d = await res.json();
-        setMsg(d.error || "Export failed");
+      try {
+        const res = await fetch(`${API_URL.replace('/api', '')}/api/admin/export`);
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "tournament_results.csv";
+          a.click();
+          setMsg("Export downloaded!");
+          setMsgType("ok");
+        } else {
+          const d = await res.json().catch(() => ({}));
+          setMsg(d.error || "Export failed");
+          setMsgType("err");
+        }
+      } catch (e) {
+        console.error('[Admin] Export error:', e);
+        setMsg("Network error — is the backend running?");
         setMsgType("err");
       }
       setLoading(false);
       return;
     }
 
-    const res = await fetch("/api/admin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setMsg(data.message || "Done");
-      setMsgType("ok");
-    } else {
-      setMsg(data.error || "Error");
+    try {
+      const res = await fetch(`${API_URL.replace('/api', '')}/api/admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setMsg(data.message || "Done");
+        setMsgType("ok");
+      } else {
+        setMsg(data.error || "Error");
+        setMsgType("err");
+      }
+    } catch (e) {
+      console.error('[Admin] Action error:', e);
+      setMsg("Network error — is the backend running?");
       setMsgType("err");
     }
     setLoading(false);
   }
 
-  async function handleLogout() {
-    await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "logout" }),
-    });
-    router.push("/login");
-    router.refresh();
+  function handleLogout() {
+    // Clear both cookie names for compatibility
+    document.cookie = 'role=; Max-Age=0; path=/';
+    document.cookie = 'rs_session=; Max-Age=0; path=/';
+    window.location.href = "/login";
   }
+
 
   return (
     <motion.div
@@ -336,17 +344,22 @@ function TestEmailForm() {
     if (!to.trim()) return;
     setSending(true);
     setResult("");
-    const res = await fetch("/api/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to,
-        subject: "RoboSoccer — Test Email",
-        body: "This is a test email from the Tectonics RoboSoccer tournament system. If you received this, email notifications are working correctly!",
-      }),
-    });
-    const d = await res.json();
-    setResult(d.ok ? "Email sent successfully!" : `Error: ${d.error}`);
+    // Note: email endpoint lives on the backend
+    try {
+      const res = await fetch(`${API_URL.replace('/api', '')}/api/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to,
+          subject: "RoboSoccer — Test Email",
+          body: "This is a test email from the Tectonics RoboSoccer tournament system. If you received this, email notifications are working correctly!",
+        }),
+      });
+      const d = await res.json().catch(() => ({ error: 'Invalid response' }));
+      setResult(d.ok ? "Email sent successfully!" : `Error: ${d.error || 'Unknown error'}`);
+    } catch (e) {
+      setResult('Network error — is the backend running?');
+    }
     setSending(false);
   }
 

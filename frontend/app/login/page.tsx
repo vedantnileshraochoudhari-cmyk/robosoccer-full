@@ -36,19 +36,25 @@ function LoginCard({
     if (!password.trim()) return;
     setLoading(true);
     setError("");
-    const res = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "login", role, password }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      const from = searchParams.get("from") || "/";
-      router.push(from === "/login" ? "/" : from);
-    } else {
-      setError(data.error || "Wrong password");
+
+    // Client-side password check against env vars
+    // Set NEXT_PUBLIC_ADMIN_PASSWORD and NEXT_PUBLIC_VOLUNTEER_PASSWORD on Vercel
+    const adminPass = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin123";
+    const volunteerPass = process.env.NEXT_PUBLIC_VOLUNTEER_PASSWORD || "volunteer123";
+    const expectedPass = role === "admin" ? adminPass : volunteerPass;
+
+    if (password !== expectedPass) {
+      setError("Wrong password");
       setLoading(false);
+      return;
     }
+
+    // Set the role cookie — must be readable by server-side layout.tsx
+    document.cookie = `role=${role}; path=/; max-age=${60 * 60 * 12}; SameSite=lax`;
+
+    const from = searchParams.get("from") || "/";
+    // Use window.location to ensure layout re-reads the cookie on full navigation
+    window.location.href = from === "/login" ? "/" : from;
   }
 
   const isAdmin = role === "admin";

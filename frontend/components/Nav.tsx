@@ -21,14 +21,12 @@ export default function Nav({ role }: { role: string }) {
     ...(role === "admin" ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
-  async function handleLogout() {
-    await fetch("/api/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "logout" }),
-    });
-    router.push("/login");
-    router.refresh();
+  function handleLogout() {
+    // Clear both cookie names for compatibility
+    document.cookie = 'role=; Max-Age=0; path=/';
+    document.cookie = 'rs_session=; Max-Age=0; path=/';
+    // Full reload so layout.tsx re-reads the cleared cookie
+    window.location.href = "/login";
   }
 
   return (
